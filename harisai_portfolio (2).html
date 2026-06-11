@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HariSai — Video Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700;1,900&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --obsidian:   #080808;
+            --smoke:      #111111;
+            --glass:      #181818;
+            --border:     #252525;
+            --zinc:       #3a3a3a;
+            --mist:       #7a7a7a;
+            --platinum:   #e8e0d0;
+            --cream:      #f5f0e8;
+            --crimson:    #c41230;
+            --crimson-dim:#8a0d22;
+            --gold:       #c9a96e;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            background-color: var(--obsidian);
+            color: var(--platinum);
+            font-family: 'Inter', sans-serif;
+            font-weight: 300;
+            overflow-x: hidden;
+            cursor: default;
+        }
+
+        /* ── CUSTOM CURSOR ── */
+        .cursor-dot {
+            width: 6px; height: 6px;
+            background: var(--crimson);
+            border-radius: 50%;
+            position: fixed; top: 0; left: 0;
+            pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s ease;
+        }
+        .cursor-ring {
+            width: 36px; height: 36px;
+            border: 1px solid rgba(196,18,48,0.4);
+            border-radius: 50%;
+            position: fixed; top: 0; left: 0;
+            pointer-events: none; z-index: 9998;
+            transform: translate(-50%, -50%);
+            transition: all 0.18s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: var(--obsidian); }
+        ::-webkit-scrollbar-thumb { background: var(--crimson); border-radius: 2px; }
+
+        /* ── NAV ── */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 1.5rem 4rem;
+            backdrop-filter: blur(24px) saturate(1.4);
+            -webkit-backdrop-filter: blur(24px) saturate(1.4);
+            background: rgba(8,8,8,0.82);
+            border-bottom: 1px solid rgba(37,37,37,0.6);
+            transition: padding 0.3s ease;
+        }
+
+        .nav-logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            color: var(--platinum);
+        }
+        .nav-logo span { color: var(--crimson); font-style: italic; }
+
+        .nav-right { display: flex; align-items: center; gap: 2.5rem; }
+
+        .nav-link {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: var(--mist);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .nav-link:hover { color: var(--platinum); }
+
+        .btn-contact {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--obsidian);
+            background: var(--platinum);
+            padding: 0.6rem 1.5rem;
+            border: none;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 700;
+        }
+        .btn-contact:hover {
+            background: var(--gold);
+            transform: translateY(-1px);
+        }
+
+        /* ── FILM STRIP TICKER ── */
+        .filmstrip {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 38px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            pointer-events: none;
+            z-index: 2;
+        }
+        .filmstrip-inner {
+            display: flex;
+            gap: 0;
+            animation: tickerScroll 28s linear infinite;
+            white-space: nowrap;
+        }
+        .filmstrip-item {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.55rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--zinc);
+            padding: 0 2.5rem;
+            display: flex; align-items: center; gap: 2rem;
+        }
+        .filmstrip-item .dot-sep {
+            width: 3px; height: 3px;
+            background: var(--crimson);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        @keyframes tickerScroll {
+            from { transform: translateX(0); }
+            to   { transform: translateX(-50%); }
+        }
+
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 8rem 4rem 4rem;
+            overflow: hidden;
+        }
+
+        /* Large background text */
+        .hero-bg-text {
+            position: absolute;
+            bottom: -0.1em; left: -0.02em;
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(10rem, 22vw, 22rem);
+            font-weight: 900;
+            font-style: italic;
+            line-height: 0.85;
+            color: transparent;
+            -webkit-text-stroke: 1px rgba(37,37,37,0.8);
+            pointer-events: none;
+            user-select: none;
+            z-index: 0;
+            letter-spacing: -0.04em;
+        }
+
+        .hero-inner {
+            position: relative; z-index: 1;
+            max-width: 900px;
+        }
+
+        .hero-eyebrow {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--crimson);
+            margin-bottom: 1.8rem;
+            display: flex; align-items: center; gap: 1rem;
+        }
+        .hero-eyebrow::before {
+            content: '';
+            display: block;
+            width: 40px; height: 1px;
+            background: var(--crimson);
+        }
+
+        .hero-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(3.2rem, 7.5vw, 7rem);
+            font-weight: 900;
+            line-height: 0.95;
+            letter-spacing: -0.035em;
+            color: var(--cream);
+            margin-bottom: 1.8rem;
+        }
+        .hero-title em {
+            font-style: italic;
+            color: var(--crimson);
+        }
+
+        .hero-sub {
+            font-size: 1rem;
+            color: var(--mist);
+            max-width: 440px;
+            line-height: 1.8;
+            font-weight: 300;
+            margin-bottom: 3rem;
+        }
+
+        .hero-cta-row {
+            display: flex; align-items: center; gap: 2rem;
+        }
+
+        .btn-primary {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--cream);
+            background: var(--crimson);
+            padding: 1rem 2.4rem;
+            text-decoration: none;
+            display: inline-flex; align-items: center; gap: 0.75rem;
+            transition: all 0.3s ease;
+            font-weight: 700;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: var(--cream);
+            transform: translateX(-101%);
+            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+            z-index: 0;
+        }
+        .btn-primary:hover::after { transform: translateX(0); }
+        .btn-primary:hover { color: var(--crimson); }
+        .btn-primary span { position: relative; z-index: 1; }
+        .btn-primary i  { position: relative; z-index: 1; }
+
+        .btn-ghost {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--mist);
+            text-decoration: none;
+            display: inline-flex; align-items: center; gap: 0.6rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 2px;
+            transition: all 0.3s ease;
+            font-weight: 400;
+        }
+        .btn-ghost:hover { color: var(--platinum); border-color: var(--platinum); }
+
+        /* ── STAT ROW ── */
+        .stat-row {
+            position: absolute;
+            bottom: 4rem; right: 4rem;
+            display: flex; gap: 3rem;
+            z-index: 1;
+        }
+        .stat-item { text-align: right; }
+        .stat-num {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.4rem;
+            font-weight: 900;
+            line-height: 1;
+            color: var(--cream);
+        }
+        .stat-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.55rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--mist);
+            margin-top: 0.25rem;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 4rem; left: 4rem;
+            z-index: 1;
+            display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+        }
+        .scroll-line {
+            width: 1px; height: 60px;
+            background: linear-gradient(to bottom, transparent, var(--crimson));
+            animation: scrollPulse 2s ease-in-out infinite;
+        }
+        @keyframes scrollPulse {
+            0%,100% { opacity: 0.3; transform: scaleY(1); }
+            50%      { opacity: 1;   transform: scaleY(1.15); }
+        }
+        .scroll-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.5rem;
+            letter-spacing: 0.3em;
+            text-transform: uppercase;
+            color: var(--mist);
+            writing-mode: vertical-lr;
+            transform: rotate(180deg);
+        }
+
+        /* ── DIVIDER ── */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, var(--border), transparent);
+            margin: 0 4rem;
+        }
+
+        /* ── ABOUT ── */
+        .about {
+            padding: 8rem 4rem;
+            display: grid;
+            grid-template-columns: 1fr 1.6fr;
+            gap: 6rem;
+            align-items: start;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .about-left { position: sticky; top: 9rem; }
+
+        .section-label {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.6rem;
+            letter-spacing: 0.25em;
+            text-transform: uppercase;
+            color: var(--crimson);
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2.5rem, 4vw, 3.8rem);
+            font-weight: 900;
+            line-height: 1.0;
+            color: var(--cream);
+            letter-spacing: -0.03em;
+        }
+        .section-title em {
+            font-style: italic;
+            color: transparent;
+            -webkit-text-stroke: 1px var(--crimson);
+        }
+
+        .about-line {
+            width: 50px; height: 2px;
+            background: var(--crimson);
+            margin-top: 2rem;
+        }
+
+        .about-right {}
+
+        .about-quote {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.35rem;
+            font-style: italic;
+            font-weight: 400;
+            color: var(--platinum);
+            line-height: 1.7;
+            margin-bottom: 3rem;
+            border-left: 2px solid var(--crimson);
+            padding-left: 1.8rem;
+        }
+
+        .about-body {
+            font-size: 0.95rem;
+            color: var(--mist);
+            line-height: 1.9;
+            margin-bottom: 3rem;
+        }
+
+        .skills-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            margin-top: 3rem;
+        }
+
+        .skill-item {
+            background: var(--smoke);
+            padding: 1.6rem 1.8rem;
+            display: flex; align-items: center; gap: 1rem;
+            transition: background 0.3s ease;
+        }
+        .skill-item:hover { background: var(--glass); }
+
+        .skill-icon {
+            width: 36px; height: 36px;
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--crimson);
+            font-size: 0.8rem;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+        .skill-item:hover .skill-icon { background: var(--crimson); color: var(--cream); border-color: var(--crimson); }
+
+        .skill-name {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.65rem;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--platinum);
+            font-weight: 700;
+        }
+
+        /* ── WORK SECTION ── */
+        .work {
+            padding: 8rem 4rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .work-header {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            margin-bottom: 5rem;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+        }
+
+        .project-card {
+            position: relative;
+            overflow: hidden;
+            background: var(--glass);
+            cursor: pointer;
+        }
+        .project-card.tall { grid-row: span 1; }
+        .project-card.featured { grid-column: span 2; }
+
+        .project-media {
+            aspect-ratio: 16/9;
+            background: var(--obsidian);
+            overflow: hidden;
+            position: relative;
+        }
+        .project-card.vertical .project-media {
+            aspect-ratio: 9/16;
+        }
+
+        .project-media iframe {
+            width: 100%; height: 100%;
+            border: none;
+            display: block;
+        }
+
+        .project-media-dual {
+            aspect-ratio: 16/9;
+            background: var(--obsidian);
+            overflow: hidden;
+            display: flex;
+        }
+        .project-media-dual iframe {
+            width: 50%; height: 100%;
+            border: none;
+            display: block;
+        }
+        .project-media-dual .divider-v {
+            width: 2px; flex-shrink: 0;
+            background: var(--obsidian);
+        }
+
+        .project-info {
+            padding: 1.8rem 2rem;
+            border-top: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        .project-meta {}
+
+        .project-cat {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.55rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--crimson);
+            margin-bottom: 0.4rem;
+        }
+        .project-title-text {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--cream);
+            letter-spacing: -0.01em;
+        }
+        .project-desc {
+            font-size: 0.78rem;
+            color: var(--mist);
+            margin-top: 0.25rem;
+        }
+
+        .project-arrow {
+            width: 40px; height: 40px;
+            border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--mist);
+            font-size: 0.7rem;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .project-card:hover .project-arrow {
+            background: var(--crimson);
+            border-color: var(--crimson);
+            color: var(--cream);
+        }
+
+        /* hover lift */
+        .project-card {
+            transition: transform 0.4s cubic-bezier(0.165,0.84,0.44,1);
+        }
+        .project-card:hover { transform: translateY(-4px); }
+
+        /* ── PROCESS ── */
+        .process {
+            padding: 8rem 4rem;
+            background: var(--smoke);
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        .process-inner {
+            max-width: 1400px; margin: 0 auto;
+        }
+        .process-steps {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 2px;
+            margin-top: 4rem;
+            background: var(--border);
+        }
+        .process-step {
+            background: var(--smoke);
+            padding: 2.5rem 2rem;
+            transition: background 0.3s ease;
+        }
+        .process-step:hover { background: var(--glass); }
+
+        .step-num {
+            font-family: 'Playfair Display', serif;
+            font-size: 3.5rem;
+            font-weight: 900;
+            font-style: italic;
+            color: transparent;
+            -webkit-text-stroke: 1px var(--border);
+            line-height: 1;
+            margin-bottom: 1.5rem;
+            transition: -webkit-text-stroke 0.3s ease;
+        }
+        .process-step:hover .step-num { -webkit-text-stroke-color: var(--crimson); }
+
+        .step-name {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--cream);
+            margin-bottom: 0.75rem;
+        }
+        .step-desc {
+            font-size: 0.82rem;
+            color: var(--mist);
+            line-height: 1.7;
+        }
+
+        /* ── CTA ── */
+        .cta-section {
+            padding: 10rem 4rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .cta-bg {
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 50% 120%, rgba(196,18,48,0.08) 0%, transparent 65%);
+            pointer-events: none;
+        }
+        .cta-section .section-label { justify-content: center; display: flex; }
+        .cta-title {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(3rem, 7vw, 6.5rem);
+            font-weight: 900;
+            font-style: italic;
+            line-height: 1.0;
+            color: var(--cream);
+            letter-spacing: -0.04em;
+            margin: 1.5rem 0 3rem;
+        }
+        .cta-title span { color: var(--crimson); }
+
+        .cta-buttons {
+            display: flex; justify-content: center; align-items: center; gap: 1.5rem;
+        }
+
+        .btn-whatsapp-lux {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--cream);
+            background: transparent;
+            border: 1px solid rgba(255,255,255,0.15);
+            padding: 1rem 2.4rem;
+            text-decoration: none;
+            display: inline-flex; align-items: center; gap: 0.75rem;
+            transition: all 0.3s ease;
+            font-weight: 700;
+        }
+        .btn-whatsapp-lux:hover {
+            border-color: var(--cream);
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            padding: 4rem;
+            border-top: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .footer-logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            color: var(--platinum);
+        }
+        .footer-logo span { color: var(--crimson); font-style: italic; }
+
+        .footer-links {
+            display: flex; gap: 2rem;
+        }
+        .footer-link {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.6rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--mist);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        .footer-link:hover { color: var(--platinum); }
+
+        .footer-copy {
+            font-family: 'Space Mono', monospace;
+            font-size: 0.55rem;
+            letter-spacing: 0.15em;
+            color: var(--zinc);
+        }
+
+        /* ── SCROLL REVEAL ── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(24px);
+            transition: opacity 0.75s cubic-bezier(0.4,0,0.2,1),
+                        transform 0.75s cubic-bezier(0.4,0,0.2,1);
+        }
+        .reveal.visible { opacity: 1; transform: none; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            nav { padding: 1.2rem 1.5rem; }
+            .nav-link { display: none; }
+            .hero { padding: 7rem 1.5rem 4rem; }
+            .stat-row { right: 1.5rem; bottom: 3rem; gap: 1.5rem; }
+            .stat-num { font-size: 1.8rem; }
+            .scroll-indicator { display: none; }
+            .about { grid-template-columns: 1fr; gap: 3rem; padding: 5rem 1.5rem; }
+            .about-left { position: static; }
+            .work { padding: 5rem 1.5rem; }
+            .projects-grid { grid-template-columns: 1fr; }
+            .project-card.featured { grid-column: span 1; }
+            .project-media-dual { aspect-ratio: 4/3; }
+            .process { padding: 5rem 1.5rem; }
+            .process-steps { grid-template-columns: 1fr 1fr; }
+            .cta-section { padding: 6rem 1.5rem; }
+            .cta-buttons { flex-direction: column; }
+            footer { flex-direction: column; gap: 2rem; text-align: center; }
+            .footer-links { justify-content: center; }
+            .section-divider { margin: 0 1.5rem; }
+            .skills-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cursor-dot" id="cursorDot"></div>
+    <div class="cursor-ring" id="cursorRing"></div>
+
+    <!-- NAV -->
+    <nav>
+        <a href="#" class="nav-logo">HARI<span>SAI</span></a>
+        <div class="nav-right">
+            <a href="#work" class="nav-link">Work</a>
+            <a href="#about" class="nav-link">About</a>
+            <a href="#process" class="nav-link">Process</a>
+            <a href="https://wa.me/+918985108403" target="_blank" class="btn-contact">Hire Me</a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+
+        <!-- Film strip ticker -->
+        <div class="filmstrip">
+            <div class="filmstrip-inner">
+                <!-- duplicated for seamless loop -->
+                <div class="filmstrip-item">Faceless Video Edits<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Reels Editing<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Logo Animation<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Speed Ramps<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Colour Grading<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Motion Graphics<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Cinematic Cuts<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Wedding Films<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Faceless Video Edits<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Reels Editing<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Logo Animation<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Speed Ramps<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Colour Grading<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Motion Graphics<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Cinematic Cuts<span class="dot-sep"></span></div>
+                <div class="filmstrip-item">Wedding Films<span class="dot-sep"></span></div>
+            </div>
+        </div>
+
+        <div class="hero-bg-text">FRAME</div>
+
+        <div class="hero-inner">
+            <div class="hero-eyebrow">Video Editor &amp; Motion Designer</div>
+
+            <h1 class="hero-title">
+                Stories told<br>
+                through <em>motion.</em>
+            </h1>
+
+            <p class="hero-sub">
+                Crafting high-retention visuals for creators, brands, and agencies. Every frame is intentional, every cut deliberate.
+            </p>
+
+            <div class="hero-cta-row">
+                <a href="#work" class="btn-primary"><span>View Work</span> <i class="fas fa-arrow-down"></i></a>
+                <a href="https://www.instagram.com/seetha_ramarajuu?igsh=MTZ2MXZtY2I4Z3J0bQ==" target="_blank" class="btn-ghost"><i class="fab fa-instagram"></i> @seetha_ramarajuu</a>
+            </div>
+        </div>
+
+        <div class="stat-row">
+            <div class="stat-item">
+                <div class="stat-num">50+</div>
+                <div class="stat-label">Projects Delivered</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-num">5</div>
+                <div class="stat-label">Specialisations</div>
+            </div>
+        </div>
+
+        <div class="scroll-indicator">
+            <div class="scroll-line"></div>
+            <div class="scroll-label">Scroll</div>
+        </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- ABOUT -->
+    <section id="about" class="about">
+        <div class="about-left reveal">
+            <div class="section-label">About Me</div>
+            <h2 class="section-title">The<br>Editor<br>Behind<br>the <em>Lens</em></h2>
+            <div class="about-line"></div>
+        </div>
+        <div class="about-right reveal">
+            <p class="about-quote">
+                "Where creativity meets technology to craft visually stunning narratives — transforming ordinary footage into extraordinary visual experiences."
+            </p>
+            <p class="about-body">
+                HariSai is a Hyderabad-based video editor and motion designer specialising in high-retention storytelling for faceless channels, dynamic social reels, and custom brand animations. With a deep understanding of pacing, colour, and narrative arc, every project is approached as a distinct cinematic work.
+            </p>
+
+            <div class="skills-grid">
+                <div class="skill-item">
+                    <div class="skill-icon"><i class="fas fa-film"></i></div>
+                    <div class="skill-name">Faceless Edits</div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-icon"><i class="fas fa-mobile-alt"></i></div>
+                    <div class="skill-name">Reels Editing</div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-icon"><i class="fas fa-cube"></i></div>
+                    <div class="skill-name">Logo Animation</div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-icon"><i class="fas fa-bolt"></i></div>
+                    <div class="skill-name">Speed Ramps</div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-icon"><i class="fas fa-palette"></i></div>
+                    <div class="skill-name">Colour Grading</div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-icon"><i class="fas fa-layer-group"></i></div>
+                    <div class="skill-name">Motion Graphics</div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-icon"><i class="fas fa-heart"></i></div>
+                    <div class="skill-name">Wedding Films</div>
+                </div>
+                <div class="skill-item">
+                    <div class="skill-icon"><i class="fas fa-music"></i></div>
+                    <div class="skill-name">Montage Edits</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- WORK -->
+    <section id="work" class="work">
+        <div class="work-header reveal">
+            <div>
+                <div class="section-label">Selected Work</div>
+                <h2 class="section-title" style="font-size:clamp(2rem,3.5vw,3rem);">Projects</h2>
+            </div>
+            <a href="https://wa.me/+918985108403" target="_blank" class="btn-ghost">Commission a project <i class="fas fa-arrow-right"></i></a>
+        </div>
+
+        <div class="projects-grid">
+
+            <!-- ROW 1: Documentary + Logo Animation -->
+            <div class="project-card reveal">
+                <div class="project-media">
+                    <iframe src="https://drive.google.com/file/d/1vBdngSxNjmnBgSDB8gaVyZLkt7Lb50b-/preview" allow="autoplay"></iframe>
+                </div>
+                <div class="project-info">
+                    <div class="project-meta">
+                        <div class="project-cat">Faceless · Long-form</div>
+                        <div class="project-title-text">Documentary Edit</div>
+                        <div class="project-desc">High-retention storytelling for faceless channels.</div>
+                    </div>
+                    <div class="project-arrow"><i class="fas fa-arrow-up-right-from-square" style="font-size:0.65rem;"></i></div>
+                </div>
+            </div>
+
+            <div class="project-card reveal">
+                <div class="project-media">
+                    <iframe src="https://drive.google.com/file/d/18H6CdFUY1agChrEE9rX08py8OuPthwWz/preview" allow="autoplay"></iframe>
+                </div>
+                <div class="project-info">
+                    <div class="project-meta">
+                        <div class="project-cat">Branding · Animation</div>
+                        <div class="project-title-text">Logo Animation</div>
+                        <div class="project-desc">Custom motion graphics and brand identity.</div>
+                    </div>
+                    <div class="project-arrow"><i class="fas fa-arrow-up-right-from-square" style="font-size:0.65rem;"></i></div>
+                </div>
+            </div>
+
+            <!-- ROW 2: Wedding vertical (left) + Vertical project (right) -->
+            <div class="project-card reveal">
+                <div class="project-media" style="aspect-ratio:9/16; max-height:560px;">
+                    <iframe src="https://drive.google.com/file/d/1McdrNXHc-rtFwhhpEyhFdphfCVtNt3fD/preview" allow="autoplay"></iframe>
+                </div>
+                <div class="project-info">
+                    <div class="project-meta">
+                        <div class="project-cat">Wedding · Cinematic Montage</div>
+                        <div class="project-title-text">Marriage &amp; Haldi Montage</div>
+                        <div class="project-desc">Cinematic wedding film — colour-graded for emotion, cut to music.</div>
+                    </div>
+                    <div class="project-arrow"><i class="fas fa-arrow-up-right-from-square" style="font-size:0.65rem;"></i></div>
+                </div>
+            </div>
+
+            <div class="project-card vertical reveal">
+                <div class="project-media" style="aspect-ratio:9/16; max-height:560px;">
+                    <iframe src="https://drive.google.com/file/d/1gjhDl7ZA7qSUfr6BeBvnagisWA742hmu/preview" allow="autoplay"></iframe>
+                </div>
+                <div class="project-info">
+                    <div class="project-meta">
+                        <div class="project-cat">Real Estate · Property Showcase</div>
+                        <div class="project-title-text">Real Estate Project</div>
+                        <div class="project-desc">Cinematic property showcase edited for maximum visual impact and client appeal.</div>
+                    </div>
+                    <div class="project-arrow"><i class="fas fa-arrow-up-right-from-square" style="font-size:0.65rem;"></i></div>
+                </div>
+            </div>
+
+            <!-- ROW 3: Social Reels — full width at bottom -->
+            <div class="project-card reveal" style="grid-column: span 2;">
+                <div class="project-media-dual">
+                    <iframe src="https://drive.google.com/file/d/1NhKvnr35bzcid1ET-pBYxomy52zSQhbk/preview" allow="autoplay" title="Reel 1"></iframe>
+                    <div class="divider-v"></div>
+                    <iframe src="https://drive.google.com/file/d/1Nrm8d0-D--MFedXpuHusGj6Ho2LIzyXv/preview" allow="autoplay" title="Reel 2"></iframe>
+                </div>
+                <div class="project-info" style="padding: 2rem 2.5rem;">
+                    <div class="project-meta">
+                        <div class="project-cat">Social · Short-form</div>
+                        <div class="project-title-text">Social Media Reels</div>
+                        <div class="project-desc">Short-form content &amp; vertical edits optimised for Instagram, YouTube Shorts and TikTok.</div>
+                    </div>
+                    <div class="project-arrow" style="width:48px;height:48px;"><i class="fas fa-arrow-up-right-from-square" style="font-size:0.65rem;"></i></div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- PROCESS -->
+    <section id="process" class="process">
+        <div class="process-inner">
+            <div class="reveal">
+                <div class="section-label">How I Work</div>
+                <h2 class="section-title" style="font-size:clamp(2rem,3.5vw,3rem);">Process</h2>
+            </div>
+            <div class="process-steps">
+                <div class="process-step reveal">
+                    <div class="step-num">01</div>
+                    <div class="step-name">Discovery</div>
+                    <div class="step-desc">Understanding your brand, audience, and the story you need to tell. A clear brief drives a sharper edit.</div>
+                </div>
+                <div class="process-step reveal">
+                    <div class="step-num">02</div>
+                    <div class="step-name">Assembly</div>
+                    <div class="step-desc">Raw footage is structured into a narrative arc — pacing, rhythm, and energy are established in this pass.</div>
+                </div>
+                <div class="process-step reveal">
+                    <div class="step-num">03</div>
+                    <div class="step-name">Polish</div>
+                    <div class="step-desc">Colour grading, motion graphics, sound design, and transitions are refined until every frame is intentional.</div>
+                </div>
+                <div class="process-step reveal">
+                    <div class="step-num">04</div>
+                    <div class="step-name">Delivery</div>
+                    <div class="step-desc">Final exports optimised for your platform — YouTube, Instagram, TikTok, or broadcast. Ready to publish.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <div class="cta-bg"></div>
+        <div class="reveal">
+            <div class="section-label">Open to Work</div>
+            <h2 class="cta-title">
+                Let's make<br>something <span>remarkable.</span>
+            </h2>
+            <div class="cta-buttons">
+                <a href="https://wa.me/+918985108403" target="_blank" class="btn-primary"><span>Start a Project</span> <i class="fab fa-whatsapp"></i></a>
+                <a href="https://www.instagram.com/seetha_ramarajuu?igsh=MTZ2MXZtY2I4Z3J0bQ==" target="_blank" class="btn-whatsapp-lux"><i class="fab fa-instagram"></i> <span>Instagram</span></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-logo">HARI<span>SAI</span></div>
+        <div class="footer-links">
+            <a href="#work" class="footer-link">Work</a>
+            <a href="#about" class="footer-link">About</a>
+            <a href="https://wa.me/+918985108403" target="_blank" class="footer-link">WhatsApp</a>
+            <a href="https://www.instagram.com/seetha_ramarajuu" target="_blank" class="footer-link">Instagram</a>
+        </div>
+        <div class="footer-copy">© 2025 HariSai. All rights reserved.</div>
+    </footer>
+
+    <script>
+        // Custom cursor
+        const dot  = document.getElementById('cursorDot');
+        const ring = document.getElementById('cursorRing');
+        let mouseX = 0, mouseY = 0;
+        document.addEventListener('mousemove', e => {
+            mouseX = e.clientX; mouseY = e.clientY;
+            dot.style.left  = mouseX + 'px';
+            dot.style.top   = mouseY + 'px';
+            ring.style.left = mouseX + 'px';
+            ring.style.top  = mouseY + 'px';
+        });
+        document.querySelectorAll('a, button, .project-card, .skill-item, .process-step').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                ring.style.width = '52px'; ring.style.height = '52px';
+                ring.style.borderColor = 'rgba(196,18,48,0.7)';
+            });
+            el.addEventListener('mouseleave', () => {
+                ring.style.width = '36px'; ring.style.height = '36px';
+                ring.style.borderColor = 'rgba(196,18,48,0.4)';
+            });
+        });
+
+        // Scroll reveal
+        const observer = new IntersectionObserver(entries => {
+            entries.forEach((entry, i) => {
+                if (entry.isIntersecting) {
+                    const siblings = entry.target.parentElement.querySelectorAll('.reveal:not(.visible)');
+                    let delay = 0;
+                    siblings.forEach(s => {
+                        if (s === entry.target) {
+                            entry.target.style.transitionDelay = delay + 'ms';
+                            entry.target.classList.add('visible');
+                        }
+                    });
+                    entry.target.style.transitionDelay = '0ms';
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.12 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+        // Stagger siblings
+        document.querySelectorAll('.projects-grid, .skills-grid, .process-steps').forEach(parent => {
+            parent.querySelectorAll('.reveal').forEach((child, i) => {
+                child.dataset.delay = i * 80;
+            });
+        });
+        const staggerObs = new IntersectionObserver(entries => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const delay = parseInt(entry.target.dataset.delay || 0);
+                    setTimeout(() => entry.target.classList.add('visible'), delay);
+                }
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('[data-delay]').forEach(el => staggerObs.observe(el));
+    </script>
+</body>
+</html>
